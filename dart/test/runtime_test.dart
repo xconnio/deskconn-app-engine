@@ -190,6 +190,51 @@ void main() {
     expect(host.eval(host.component['label']), 'office-pc');
   });
 
+  test('a slider sets what it is changed to', () async {
+    const read = 'io.xconn.deskconn.deskconnd.audio.volume';
+    const set = 'io.xconn.deskconn.deskconnd.audio.setvolume';
+    final volume = BlockController(
+      block: {
+        'state': {'value': null},
+        'on_mount': {
+          'call': read,
+          'on_result': {
+            'set': {
+              'value': {'bind': 'result'},
+            },
+          },
+        },
+        'component': {
+          'type': 'slider',
+          'value': {'bind': 'state.value'},
+          'on_change': {
+            'call': set,
+            'arg': {'bind': 'value'},
+            'on_result': {
+              'set': {
+                'value': {'bind': 'result'},
+              },
+            },
+          },
+        },
+      },
+      context: const {},
+      caller: caller.call,
+    );
+    unawaited(volume.mount());
+    await caller.respond(read, result: 30);
+    expect(volume.eval(volume.component['value']), 30);
+
+    unawaited(volume.change(55.0));
+    expect(caller.calls.last.procedure, set);
+    expect(caller.calls.last.arg, 55.0);
+    // Changing again while the call is in flight does nothing.
+    await volume.change(70.0);
+    expect(caller.calls.where((c) => c.procedure == set), hasLength(1));
+    await caller.respond(set, result: 55);
+    expect(volume.state['value'], 55);
+  });
+
   test('ignores responses after unmount', () async {
     final mute = controller('mute');
     unawaited(mute.mount());
