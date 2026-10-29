@@ -161,6 +161,13 @@ class BlockController extends ChangeNotifier {
     await _run(component['on_activate'], _scope);
   }
 
+  /// Runs the component's `on_change` with [value] in scope as `value`, unless a call is
+  /// already in flight.
+  Future<void> change(dynamic value) async {
+    if (busy) return;
+    await _run(component['on_change'], {..._scope, 'value': value});
+  }
+
   Future<void> _run(dynamic action, Map<String, dynamic> scope) async {
     if (action is! Map || _disposed) return;
 

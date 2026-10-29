@@ -92,6 +92,7 @@ class _ManifestBlockViewState extends State<ManifestBlockView> {
         return switch (component['type']) {
           'button' => _ManifestButton(controller: _controller, component: component),
           'text' => _ManifestText(controller: _controller, component: component),
+          'slider' => _ManifestSlider(controller: _controller, component: component),
           final type => _Unsupported('component $type'),
         };
       },
@@ -170,6 +171,76 @@ class _ManifestText extends StatelessWidget {
                       ? theme.textTheme.titleMedium
                       : theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
                 ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManifestSlider extends StatefulWidget {
+  const _ManifestSlider({required this.controller, required this.component});
+
+  final BlockController controller;
+  final Map<String, dynamic> component;
+
+  @override
+  State<_ManifestSlider> createState() => _ManifestSliderState();
+}
+
+class _ManifestSliderState extends State<_ManifestSlider> {
+  /// The value being dragged, held until its change call returns.
+  double? _dragging;
+
+  double? _number(String key) => (widget.controller.eval(widget.component[key]) as num?)?.toDouble();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final controller = widget.controller;
+    final min = _number('min') ?? 0;
+    final max = _number('max') ?? 100;
+    if (max <= min) return const _Unsupported('slider range');
+    final step = _number('step');
+    final value = (_dragging ?? _number('value') ?? min).clamp(min, max);
+    final error = controller.error;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              controller.eval(widget.component['label'])?.toString() ?? '',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value == value.roundToDouble() ? value.toInt().toString() : value.toStringAsFixed(1),
+              style: theme.textTheme.titleMedium,
+            ),
+            Slider(
+              min: min,
+              max: max,
+              divisions: step != null && step > 0 ? ((max - min) / step).round() : null,
+              value: value,
+              onChanged: controller.busy ? null : (v) => setState(() => _dragging = v),
+              onChangeEnd: controller.busy
+                  ? null
+                  : (v) => controller.change(v).whenComplete(() {
+                      if (mounted) setState(() => _dragging = null);
+                    }),
+            ),
+            if (error != null)
+              Text(
+                error.toString(),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+          ],
         ),
       ),
     );
