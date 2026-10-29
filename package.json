@@ -1,0 +1,17 @@
+{
+  "name": "@xconnio/app-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Renders app engine manifest apps in Vue; see web/.",
+  "main": "web/src/index.ts",
+  "files": [
+    "web/src"
+  ],
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  }
+}
