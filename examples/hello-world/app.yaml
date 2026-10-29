@@ -1,0 +1,14 @@
+schema_version: "1"
+
+app:
+  id: hello-world
+  name: Hello World
+  description: The smallest manifest app
+
+api:
+  key_exchange: io.xconn.deskconn.key.exchange
+
+entry_screen: home
+
+screens:
+  - screens/home.yaml

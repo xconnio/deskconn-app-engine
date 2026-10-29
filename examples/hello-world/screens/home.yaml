@@ -1,0 +1,10 @@
+id: home
+title: Hello World
+
+layout:
+  type: grid
+  columns: 1
+  children:
+    - id: hello
+      include: app-engine/blocks/text.yaml
+      label: Hello, world!
