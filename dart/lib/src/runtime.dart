@@ -1,4 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:yaml/yaml.dart';
+
+import 'blocks.dart';
 
 /// Calls [procedure] on the desktop with an optional [arg] and returns its decoded result.
 typedef ManifestCaller = Future<dynamic> Function(String procedure, Object? arg);
@@ -9,9 +14,10 @@ typedef ErrorUri = String Function(Object error);
 String _errorString(Object error) => error.toString();
 
 /// A manifest app as deskconn-userd's manifest.get returns it: app.yaml with its screens
-/// resolved to a map by id, and each include replaced by the included block under `block`.
+/// resolved to a map by id, and each include of the app's own files replaced by the included
+/// block under `block`. Includes of app-engine's blocks are expanded here (see [expandBlocks]).
 class ManifestApp {
-  ManifestApp(this.data);
+  ManifestApp(Map<String, dynamic> data) : data = expandBlocks(data);
 
   final Map<String, dynamic> data;
 
@@ -26,6 +32,67 @@ class ManifestApp {
   Map<String, dynamic>? screen(String id) => (data['screens'] as Map?)?[id] as Map<String, dynamic>?;
 
   Map<String, dynamic>? get entryScreen => screen(data['entry_screen']?.toString() ?? '');
+}
+
+const _blocksDirectory = 'app-engine/blocks/';
+
+/// Returns [app] with each `include: app-engine/blocks/<name>.yaml` replaced by that block
+/// under `block`, filled in from the including map's other fields: each `{param: <field>}`
+/// in the block takes the field's value at that dotted path, and is left out where it isn't
+/// set. The including map keeps only its `id` and `visible`. Unknown blocks are left as they
+/// are, for the renderer to show as unsupported.
+Map<String, dynamic> expandBlocks(Map<String, dynamic> app) {
+  final copy = jsonDecode(jsonEncode(app)) as Map<String, dynamic>;
+  _expand(copy);
+  return copy;
+}
+
+void _expand(dynamic node) {
+  if (node is List) {
+    node.forEach(_expand);
+    return;
+  }
+  if (node is! Map<String, dynamic>) return;
+
+  final include = node['include'];
+  final name = include is String && include.startsWith(_blocksDirectory)
+      ? include.substring(_blocksDirectory.length).replaceAll(RegExp(r'\.yaml$'), '')
+      : null;
+  final template = predefinedBlocks[name];
+  if (template != null) {
+    final fields = {
+      for (final entry in node.entries)
+        if (entry.key != 'id' && entry.key != 'visible' && entry.key != 'include') entry.key: entry.value,
+    };
+    node.removeWhere((key, _) => key != 'id' && key != 'visible');
+    node['block'] = _fill(jsonDecode(jsonEncode(loadYaml(template))), fields).value;
+    return;
+  }
+  node.values.forEach(_expand);
+}
+
+/// Fills [node]'s `{param: <field>}`s from [fields], returning whether to keep it.
+({dynamic value, bool keep}) _fill(dynamic node, Map<String, dynamic> fields) {
+  if (node is Map<String, dynamic>) {
+    final field = node['param'];
+    if (node.length == 1 && field is String) {
+      dynamic value = fields;
+      for (final part in field.split('.')) {
+        if (value is! Map || !value.containsKey(part)) return (value: null, keep: false);
+        value = value[part];
+      }
+      return (value: value, keep: true);
+    }
+    for (final key in node.keys.toList()) {
+      final filled = _fill(node[key], fields);
+      filled.keep ? node[key] = filled.value : node.remove(key);
+    }
+  } else if (node is List) {
+    for (var i = 0; i < node.length; i++) {
+      node[i] = _fill(node[i], fields).value;
+    }
+  }
+  return (value: node, keep: true);
 }
 
 /// Reads a dotted [path] such as `state.muted` from [scope]. Missing paths read null.
