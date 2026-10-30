@@ -80,9 +80,9 @@ void main() {
 
   test('leaves unknown blocks and doesn\'t change its input', () {
     final input = remoteControlWithIncludes();
-    (children(input).first as Map)['include'] = 'app-engine/blocks/slider.yaml';
+    (children(input).first as Map)['include'] = 'app-engine/blocks/unknown.yaml';
     final app = ManifestApp(input);
-    expect(children(app.data).first['include'], 'app-engine/blocks/slider.yaml');
+    expect(children(app.data).first['include'], 'app-engine/blocks/unknown.yaml');
     expect(children(app.data).first, isNot(contains('block')));
     expect(children(input).last, contains('include'));
   });

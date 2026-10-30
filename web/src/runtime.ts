@@ -183,6 +183,13 @@ export class BlockController {
     await this.run(this.component.on_activate, this.scope)
   }
 
+  /** Runs the component's `on_change` with `value` in scope as `value`, unless a call is
+   * already in flight. */
+  async change(value: unknown): Promise<void> {
+    if (this.busy) return
+    await this.run(this.component.on_change, { ...this.scope, value })
+  }
+
   dispose(): void {
     this.disposed = true
   }

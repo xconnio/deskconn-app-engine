@@ -56,4 +56,30 @@ component:
       set:
         on: { bind: result }
 `,
+  slider: `# Reads a value and sets it when dragged, e.g. volume or brightness.
+# Fields: label, min (optional, 0), max (optional, 100), step (optional), read, set.
+# read and set return the value.
+state:
+  value: null
+
+on_mount:
+  call: { param: read }
+  on_result:
+    set:
+      value: { bind: result }
+
+component:
+  type: slider
+  label: { param: label }
+  min: { param: min }
+  max: { param: max }
+  step: { param: step }
+  value: { bind: state.value }
+  on_change:
+    call: { param: set }
+    arg: { bind: value }
+    on_result:
+      set:
+        value: { bind: result }
+`,
 }

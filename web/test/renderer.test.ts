@@ -48,4 +48,37 @@ describe('renderer', () => {
     })
     expect(block.text()).toBe('Hello, world!')
   })
+
+  test('sliders show their value and set where they are dropped', async () => {
+    const caller = new FakeCaller()
+    const set = 'io.xconn.deskconn.deskconnd.audio.setvolume'
+    const block = mount(ManifestBlock, {
+      props: {
+        block: {
+          state: { value: 20 },
+          component: {
+            type: 'slider',
+            label: 'Volume',
+            step: 10,
+            value: { bind: 'state.value' },
+            on_change: { call: set, arg: { bind: 'value' }, on_result: { set: { value: { bind: 'result' } } } },
+          },
+        },
+        context: {},
+        caller: caller.call,
+      },
+    })
+    expect(block.text()).toContain('Volume')
+    expect(block.find('output').text()).toBe('20')
+
+    const slider = block.find('input[type=range]')
+    await slider.setValue('50')
+    expect(caller.calls[0].procedure).toBe(set)
+    expect(caller.calls[0].arg).toBe(50)
+    // The dropped value shows while the call is in flight.
+    expect(block.find('output').text()).toBe('50')
+
+    await caller.respond(set, { result: 40 })
+    expect(block.find('output').text()).toBe('40')
+  })
 })
