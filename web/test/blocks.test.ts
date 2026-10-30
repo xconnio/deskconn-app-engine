@@ -67,9 +67,9 @@ describe('blocks', () => {
 
   test("leaves unknown blocks and doesn't change its input", () => {
     const input = remoteControlWithIncludes()
-    children(input)[0].include = 'app-engine/blocks/slider.yaml'
+    children(input)[0].include = 'app-engine/blocks/unknown.yaml'
     const app = new ManifestApp(input)
-    expect(children(app.data)[0].include).toBe('app-engine/blocks/slider.yaml')
+    expect(children(app.data)[0].include).toBe('app-engine/blocks/unknown.yaml')
     expect(children(app.data)[0]).not.toHaveProperty('block')
     expect(children(input)[1]).toHaveProperty('include')
   })
