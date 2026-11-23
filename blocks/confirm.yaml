@@ -1,0 +1,10 @@
+# Calls a procedure when activated, once the user confirms, e.g. shut down or log out.
+# Fields: label, icon (optional), confirm (the question to confirm), call, arg (optional).
+component:
+  type: button
+  label: { param: label }
+  icon: { param: icon }
+  confirm: { param: confirm }
+  on_activate:
+    call: { param: call }
+    arg: { param: arg }
