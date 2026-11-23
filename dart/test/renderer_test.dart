@@ -197,4 +197,56 @@ void main() {
     await tester.pump();
     expect(find.text('40'), findsOneWidget);
   });
+
+  testWidgets('selects show their choice and set what is picked', (tester) async {
+    final caller = FakeCaller();
+    const set = 'io.xconn.deskconn.deskconnd.power.setmode';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ManifestBlockView(
+            block: const {
+              'state': {'value': 'balanced'},
+              'component': {
+                'type': 'select',
+                'label': 'Power mode',
+                'options': [
+                  {'value': 'saver', 'label': 'Power saver'},
+                  {'value': 'balanced', 'label': 'Balanced'},
+                  {'value': 'performance', 'label': 'Performance'},
+                ],
+                'value': {'bind': 'state.value'},
+                'on_change': {
+                  'call': set,
+                  'arg': {'bind': 'value'},
+                  'on_result': {
+                    'set': {
+                      'value': {'bind': 'result'},
+                    },
+                  },
+                },
+              },
+            },
+            context: const {},
+            caller: caller.call,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Power mode'), findsOneWidget);
+    expect(find.text('Balanced'), findsOneWidget);
+
+    await tester.tap(find.text('Balanced'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Performance').last);
+    await tester.pumpAndSettle();
+    expect(caller.calls.single.procedure, set);
+    expect(caller.calls.single.arg, 'performance');
+    // The picked choice shows while the call is in flight.
+    expect(find.text('Performance'), findsOneWidget);
+
+    caller.answer(set, result: 'saver');
+    await tester.pumpAndSettle();
+    expect(find.text('Power saver'), findsOneWidget);
+  });
 }

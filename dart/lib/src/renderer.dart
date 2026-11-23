@@ -93,6 +93,7 @@ class _ManifestBlockViewState extends State<ManifestBlockView> {
           'button' => _ManifestButton(controller: _controller, component: component),
           'text' => _ManifestText(controller: _controller, component: component),
           'slider' => _ManifestSlider(controller: _controller, component: component),
+          'select' => _ManifestSelect(controller: _controller, component: component),
           final type => _Unsupported('component $type'),
         };
       },
@@ -253,6 +254,77 @@ class _ManifestSliderState extends State<_ManifestSlider> {
                   : (v) => controller.change(v).whenComplete(() {
                       if (mounted) setState(() => _dragging = null);
                     }),
+            ),
+            if (error != null)
+              Text(
+                error.toString(),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ManifestSelect extends StatefulWidget {
+  const _ManifestSelect({required this.controller, required this.component});
+
+  final BlockController controller;
+  final Map<String, dynamic> component;
+
+  @override
+  State<_ManifestSelect> createState() => _ManifestSelectState();
+}
+
+class _ManifestSelectState extends State<_ManifestSelect> {
+  /// The index picked, held until its change call returns.
+  int? _picking;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final controller = widget.controller;
+    final options = [
+      for (final option in (controller.eval(widget.component['options']) as List? ?? const []).whereType<Map>())
+        (value: option['value'], label: (option['label'] ?? option['value'])?.toString() ?? ''),
+    ];
+    final current = options.indexWhere((o) => o.value == controller.eval(widget.component['value']));
+    final error = controller.error;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              controller.eval(widget.component['label'])?.toString() ?? '',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleSmall,
+            ),
+            DropdownButton<int>(
+              isExpanded: true,
+              value: _picking ?? (current < 0 ? null : current),
+              items: [
+                for (final (i, option) in options.indexed)
+                  DropdownMenuItem(
+                    value: i,
+                    child: Text(option.label, overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: controller.busy
+                  ? null
+                  : (i) {
+                      if (i == null || i == current) return;
+                      setState(() => _picking = i);
+                      controller.change(options[i].value).whenComplete(() {
+                        if (mounted) setState(() => _picking = null);
+                      });
+                    },
             ),
             if (error != null)
               Text(

@@ -151,4 +151,42 @@ describe('renderer', () => {
     await caller.respond(set, { result: 40 })
     expect(block.find('output').text()).toBe('40')
   })
+
+  test('selects show their choice and set what is picked', async () => {
+    const caller = new FakeCaller()
+    const set = 'io.xconn.deskconn.deskconnd.power.setmode'
+    const block = mount(ManifestBlock, {
+      props: {
+        block: {
+          state: { value: 'balanced' },
+          component: {
+            type: 'select',
+            label: 'Power mode',
+            options: [
+              { value: 'saver', label: 'Power saver' },
+              { value: 'balanced', label: 'Balanced' },
+              { value: 'performance', label: 'Performance' },
+            ],
+            value: { bind: 'state.value' },
+            on_change: { call: set, arg: { bind: 'value' }, on_result: { set: { value: { bind: 'result' } } } },
+          },
+        },
+        context: {},
+        caller: caller.call,
+      },
+    })
+    const select = block.find('select')
+    const chosen = () => (select.element as HTMLSelectElement).selectedOptions[0].text
+    expect(block.text()).toContain('Power mode')
+    expect(chosen()).toBe('Balanced')
+
+    await select.setValue('2')
+    expect(caller.calls[0].procedure).toBe(set)
+    expect(caller.calls[0].arg).toBe('performance')
+    // The picked choice shows while the call is in flight.
+    expect(chosen()).toBe('Performance')
+
+    await caller.respond(set, { result: 'saver' })
+    expect(chosen()).toBe('Power saver')
+  })
 })
