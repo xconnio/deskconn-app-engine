@@ -111,12 +111,19 @@ class _ManifestButton extends StatelessWidget {
     final theme = Theme.of(context);
     final label = controller.eval(component['label'])?.toString() ?? '';
     final icon = controller.eval(component['icon'])?.toString();
+    final question = controller.eval(component['confirm'])?.toString();
     final error = controller.error;
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: controller.busy ? null : controller.activate,
+        onTap: controller.busy
+            ? null
+            : question == null
+            ? controller.activate
+            : () async {
+                if (await _confirm(context, question, label)) controller.activate();
+              },
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -146,6 +153,21 @@ class _ManifestButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Asks [question] in a dialog, returning whether the user confirmed with [action].
+Future<bool> _confirm(BuildContext context, String question, String action) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      content: Text(question),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: Text(action)),
+      ],
+    ),
+  );
+  return confirmed ?? false;
 }
 
 class _ManifestText extends StatelessWidget {

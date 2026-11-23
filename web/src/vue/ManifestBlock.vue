@@ -17,6 +17,12 @@ const icon = computed(() => {
   const url = controller.eval(component.value.icon)
   return typeof url === 'string' && url.startsWith('https://') ? url : undefined
 })
+const question = computed(() => {
+  const value = controller.eval(component.value.confirm)
+  return value == null ? undefined : String(value)
+})
+// Whether a button with confirm is asking its question.
+const confirming = ref(false)
 const error = computed(() => (controller.error == null ? undefined : String(controller.error)))
 
 const number = (key: string): number | undefined => {
@@ -34,12 +40,27 @@ function onSliderChange(event: Event) {
   void controller.change(dragging.value).finally(() => (dragging.value = undefined))
 }
 
+function onActivate() {
+  if (question.value == null) void controller.activate()
+  else confirming.value = true
+}
+
+function onConfirm() {
+  confirming.value = false
+  void controller.activate()
+}
+
 onMounted(() => controller.mount())
 onUnmounted(() => controller.dispose())
 </script>
 
 <template>
-  <button v-if="component.type === 'button'" type="button" :disabled="controller.busy" @click="controller.activate()">
+  <div v-if="component.type === 'button' && confirming" role="alertdialog">
+    <span>{{ question }}</span>
+    <button type="button" @click="confirming = false">Cancel</button>
+    <button type="button" @click="onConfirm">{{ label }}</button>
+  </div>
+  <button v-else-if="component.type === 'button'" type="button" :disabled="controller.busy" @click="onActivate">
     <span v-if="controller.busy" role="progressbar" />
     <img v-else-if="icon" :src="icon" alt="" width="40" height="40" />
     <span>{{ label }}</span>

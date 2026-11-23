@@ -14,6 +14,18 @@ component:
     call: { param: call }
     arg: { param: arg }
 ''',
+  'confirm': r'''
+# Calls a procedure when activated, once the user confirms, e.g. shut down or log out.
+# Fields: label, icon (optional), confirm (the question to confirm), call, arg (optional).
+component:
+  type: button
+  label: { param: label }
+  icon: { param: icon }
+  confirm: { param: confirm }
+  on_activate:
+    call: { param: call }
+    arg: { param: arg }
+''',
   'poll': r'''
 # Shows the result of a procedure and reads it again every few seconds, e.g. CPU or battery.
 # Fields: label (optional, shown until the first read), read, every (seconds).

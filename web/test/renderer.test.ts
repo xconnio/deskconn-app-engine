@@ -49,6 +49,37 @@ describe('renderer', () => {
     expect(block.text()).toBe('Hello, world!')
   })
 
+  test('buttons with confirm call only once confirmed', async () => {
+    const caller = new FakeCaller()
+    const shutdown = 'io.xconn.deskconn.deskconnd.power.shutdown'
+    const block = mount(ManifestBlock, {
+      props: {
+        block: {
+          component: {
+            type: 'button',
+            label: 'Shut down',
+            confirm: 'Shut down the desktop?',
+            on_activate: { call: shutdown },
+          },
+        },
+        context: {},
+        caller: caller.call,
+      },
+    })
+
+    await block.find('button').trigger('click')
+    expect(block.find('[role=alertdialog]').text()).toContain('Shut down the desktop?')
+    const cancel = block.findAll('[role=alertdialog] button').find((b) => b.text() === 'Cancel')!
+    await cancel.trigger('click')
+    expect(block.find('[role=alertdialog]').exists()).toBe(false)
+    expect(caller.calls).toHaveLength(0)
+
+    await block.find('button').trigger('click')
+    const confirm = block.findAll('[role=alertdialog] button').find((b) => b.text() === 'Shut down')!
+    await confirm.trigger('click')
+    expect(caller.calls[0].procedure).toBe(shutdown)
+  })
+
   test('polls read again every few seconds without showing loading', async () => {
     vi.useFakeTimers()
     try {

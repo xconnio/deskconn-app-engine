@@ -68,6 +68,42 @@ void main() {
     );
     expect(find.text('Hello, world!'), findsOneWidget);
   });
+  testWidgets('buttons with confirm call only once confirmed', (tester) async {
+    final caller = FakeCaller();
+    const shutdown = 'io.xconn.deskconn.deskconnd.power.shutdown';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ManifestBlockView(
+            block: const {
+              'component': {
+                'type': 'button',
+                'label': 'Shut down',
+                'confirm': 'Shut down the desktop?',
+                'on_activate': {'call': shutdown},
+              },
+            },
+            context: const {},
+            caller: caller.call,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Shut down'));
+    await tester.pumpAndSettle();
+    expect(find.text('Shut down the desktop?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(caller.calls, isEmpty);
+
+    await tester.tap(find.text('Shut down'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.text('Shut down')));
+    await tester.pump();
+    expect(caller.calls.single.procedure, shutdown);
+  });
+
   testWidgets('polls read again every few seconds without showing loading', (tester) async {
     final caller = FakeCaller();
     const read = 'io.xconn.deskconn.deskconnd.cpu.usage';
