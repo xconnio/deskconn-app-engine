@@ -46,7 +46,7 @@ onUnmounted(() => controller.dispose())
     <small v-if="error">{{ error }}</small>
   </button>
   <div v-else-if="component.type === 'text'">
-    <span v-if="controller.busy" role="progressbar" />
+    <span v-if="controller.busy && !controller.loaded" role="progressbar" />
     <small v-else-if="error">{{ error }}</small>
     <span v-else>{{ label }}</span>
   </div>

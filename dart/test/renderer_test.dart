@@ -68,6 +68,55 @@ void main() {
     );
     expect(find.text('Hello, world!'), findsOneWidget);
   });
+  testWidgets('polls read again every few seconds without showing loading', (tester) async {
+    final caller = FakeCaller();
+    const read = 'io.xconn.deskconn.deskconnd.cpu.usage';
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ManifestBlockView(
+            block: const {
+              'state': {'value': 'CPU'},
+              'on_mount': {
+                'call': read,
+                'on_result': {
+                  'set': {
+                    'value': {'bind': 'result'},
+                  },
+                },
+              },
+              'refresh': 5,
+              'component': {
+                'type': 'text',
+                'label': {'bind': 'state.value'},
+              },
+            },
+            context: const {},
+            caller: caller.call,
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    caller.answer(read, result: '12%');
+    await tester.pump();
+    expect(find.text('12%'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 5));
+    expect(caller.calls, hasLength(2));
+    // The last value shows while it reads again.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('12%'), findsOneWidget);
+    caller.answer(read, result: '30%');
+    await tester.pumpAndSettle();
+    expect(find.text('30%'), findsOneWidget);
+
+    // It stops reading once removed.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 10));
+    expect(caller.calls, hasLength(2));
+  });
+
   testWidgets('sliders show their value and set where they are dropped', (tester) async {
     final caller = FakeCaller();
     await tester.pumpWidget(
