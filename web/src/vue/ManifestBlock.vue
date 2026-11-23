@@ -40,6 +40,23 @@ function onSliderChange(event: Event) {
   void controller.change(dragging.value).finally(() => (dragging.value = undefined))
 }
 
+const options = computed(() => {
+  const list = controller.eval(component.value.options)
+  return (Array.isArray(list) ? list : [])
+    .filter((option): option is Record<string, unknown> => typeof option === 'object' && option !== null)
+    .map((option) => ({ value: option.value, label: String(option.label ?? option.value ?? '') }))
+})
+// The index picked, held until its change call returns.
+const picking = ref<number>()
+const selected = computed(
+  () => picking.value ?? options.value.findIndex((option) => option.value === controller.eval(component.value.value)),
+)
+
+function onSelectChange(event: Event) {
+  picking.value = Number((event.target as HTMLSelectElement).value)
+  void controller.change(options.value[picking.value].value).finally(() => (picking.value = undefined))
+}
+
 function onActivate() {
   if (question.value == null) void controller.activate()
   else confirming.value = true
@@ -84,6 +101,14 @@ onUnmounted(() => controller.dispose())
       @input="dragging = Number(($event.target as HTMLInputElement).value)"
       @change="onSliderChange"
     />
+    <small v-if="error">{{ error }}</small>
+  </label>
+  <label v-else-if="component.type === 'select'">
+    <span>{{ label }}</span>
+    <select :value="selected" :disabled="controller.busy" @change="onSelectChange">
+      <option v-if="selected < 0" :value="-1" disabled />
+      <option v-for="(option, i) in options" :key="i" :value="i">{{ option.label }}</option>
+    </select>
     <small v-if="error">{{ error }}</small>
   </label>
   <div v-else>Unsupported component {{ component.type }}</div>

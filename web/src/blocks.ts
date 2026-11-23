@@ -84,6 +84,30 @@ component:
       set:
         on: { bind: result }
 `,
+  select: `# Reads a choice and sets it when another is picked, e.g. audio output or power mode.
+# Fields: label, options (a list of value and label), read, set.
+# read and set return the chosen value.
+state:
+  value: null
+
+on_mount:
+  call: { param: read }
+  on_result:
+    set:
+      value: { bind: result }
+
+component:
+  type: select
+  label: { param: label }
+  options: { param: options }
+  value: { bind: state.value }
+  on_change:
+    call: { param: set }
+    arg: { bind: value }
+    on_result:
+      set:
+        value: { bind: result }
+`,
   slider: `# Reads a value and sets it when dragged, e.g. volume or brightness.
 # Fields: label, min (optional, 0), max (optional, 100), step (optional), read, set.
 # read and set return the value.
