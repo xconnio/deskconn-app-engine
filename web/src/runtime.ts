@@ -148,7 +148,12 @@ export class BlockController {
   /** The last failed call that had no on_error, shown by the renderer. */
   error: unknown = null
 
+  /** Whether `on_mount` has run once. Its refreshes after that don't show loading. */
+  loaded = false
+
   private disposed = false
+
+  private refresh?: ReturnType<typeof setInterval>
 
   constructor(
     private readonly block: Json,
@@ -172,9 +177,17 @@ export class BlockController {
     return evaluate(value, this.scope)
   }
 
-  /** Runs `on_mount`, if any. */
-  mount(): Promise<void> {
-    return this.run(this.block.on_mount, this.scope)
+  /** Runs `on_mount`, if any, then again every `refresh` seconds while no call is in flight. */
+  async mount(): Promise<void> {
+    await this.run(this.block.on_mount, this.scope)
+    if (this.disposed) return
+    this.loaded = true
+    const seconds = this.block.refresh
+    if (typeof seconds === 'number' && seconds > 0) {
+      this.refresh = setInterval(() => {
+        if (!this.busy) void this.run(this.block.on_mount, this.scope)
+      }, seconds * 1000)
+    }
   }
 
   /** Runs the component's `on_activate`, unless a call is already in flight. */
@@ -192,6 +205,7 @@ export class BlockController {
 
   dispose(): void {
     this.disposed = true
+    clearInterval(this.refresh)
   }
 
   private async run(action: unknown, scope: Scope): Promise<void> {

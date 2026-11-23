@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -143,7 +144,12 @@ class BlockController extends ChangeNotifier {
   /// The last failed call that had no on_error, shown by the renderer.
   Object? error;
 
+  /// Whether `on_mount` has run once. Its refreshes after that don't show loading.
+  bool loaded = false;
+
   bool _disposed = false;
+
+  Timer? _refresh;
 
   Map<String, dynamic> get component => (_block['component'] as Map?)?.cast<String, dynamic>() ?? const {};
 
@@ -152,8 +158,19 @@ class BlockController extends ChangeNotifier {
   /// Evaluates [value] against the block's state and context.
   dynamic eval(dynamic value) => evaluate(value, _scope);
 
-  /// Runs `on_mount`, if any.
-  Future<void> mount() => _run(_block['on_mount'], _scope);
+  /// Runs `on_mount`, if any, then again every `refresh` seconds while no call is in flight.
+  Future<void> mount() async {
+    await _run(_block['on_mount'], _scope);
+    if (_disposed) return;
+    loaded = true;
+    _notify();
+    final seconds = _block['refresh'];
+    if (seconds is num && seconds > 0) {
+      _refresh = Timer.periodic(Duration(milliseconds: (seconds * 1000).round()), (_) {
+        if (!busy) _run(_block['on_mount'], _scope);
+      });
+    }
+  }
 
   /// Runs the component's `on_activate`, unless a call is already in flight.
   Future<void> activate() async {
@@ -212,6 +229,7 @@ class BlockController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _refresh?.cancel();
     super.dispose();
   }
 }

@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { ManifestApp, ManifestBlock, ManifestScreen } from '../src'
 import { FakeCaller } from './fakeCaller'
@@ -47,6 +47,45 @@ describe('renderer', () => {
       },
     })
     expect(block.text()).toBe('Hello, world!')
+  })
+
+  test('polls read again every few seconds without showing loading', async () => {
+    vi.useFakeTimers()
+    try {
+      const caller = new FakeCaller()
+      const read = 'io.xconn.deskconn.deskconnd.cpu.usage'
+      const block = mount(ManifestBlock, {
+        props: {
+          block: {
+            state: { value: 'CPU' },
+            on_mount: { call: read, on_result: { set: { value: { bind: 'result' } } } },
+            refresh: 5,
+            component: { type: 'text', label: { bind: 'state.value' } },
+          },
+          context: {},
+          caller: caller.call,
+        },
+      })
+      await nextTick()
+      expect(block.find('[role=progressbar]').exists()).toBe(true)
+      await caller.respond(read, { result: '12%' })
+      expect(block.text()).toBe('12%')
+
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(caller.calls).toHaveLength(2)
+      // The last value shows while it reads again.
+      expect(block.find('[role=progressbar]').exists()).toBe(false)
+      expect(block.text()).toBe('12%')
+      await caller.respond(read, { result: '30%' })
+      expect(block.text()).toBe('30%')
+
+      // It stops reading once removed.
+      block.unmount()
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(caller.calls).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   test('sliders show their value and set where they are dropped', async () => {

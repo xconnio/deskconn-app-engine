@@ -162,7 +162,7 @@ class _ManifestText extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Center(
-          child: controller.busy
+          child: controller.busy && !controller.loaded
               ? const CircularProgressIndicator(strokeWidth: 3)
               : Text(
                   error?.toString() ?? controller.eval(component['label'])?.toString() ?? '',

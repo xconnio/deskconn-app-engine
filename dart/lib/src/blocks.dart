@@ -14,6 +14,24 @@ component:
     call: { param: call }
     arg: { param: arg }
 ''',
+  'poll': r'''
+# Shows the result of a procedure and reads it again every few seconds, e.g. CPU or battery.
+# Fields: label (optional, shown until the first read), read, every (seconds).
+state:
+  value: { param: label }
+
+on_mount:
+  call: { param: read }
+  on_result:
+    set:
+      value: { bind: result }
+
+refresh: { param: every }
+
+component:
+  type: text
+  label: { bind: state.value }
+''',
   'text': r'''
 # Shows a label, or the result of a procedure once it returns.
 # Fields: label (optional), read (optional).
