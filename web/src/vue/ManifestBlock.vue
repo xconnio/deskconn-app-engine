@@ -53,8 +53,11 @@ const selected = computed(
 )
 
 function onSelectChange(event: Event) {
-  picking.value = Number((event.target as HTMLSelectElement).value)
-  void controller.change(options.value[picking.value].value).finally(() => (picking.value = undefined))
+  const index = Number((event.target as HTMLSelectElement).value)
+  const option = options.value[index]
+  if (!option) return
+  picking.value = index
+  void controller.change(option.value).finally(() => (picking.value = undefined))
 }
 
 function onActivate() {
