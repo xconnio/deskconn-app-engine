@@ -3,28 +3,28 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { ManifestApp } from '../src'
 import { predefinedBlocks } from '../src/blocks'
-import { remoteControlManifest } from './remoteControl'
+import { exampleManifest } from './exampleApp'
 
-/** The Remote Control app as written, including app-engine's blocks. */
-function remoteControlWithIncludes() {
-  const app = remoteControlManifest()
+/** A test app as written, including app-engine's blocks. */
+function exampleWithIncludes() {
+  const app = exampleManifest()
   app.screens.home.layout.children = [
     {
-      id: 'lock',
-      visible: { bind: 'context.capabilities.screen' },
+      id: 'ping',
+      visible: { bind: 'context.capabilities.ping' },
       include: 'app-engine/blocks/button.yaml',
-      label: 'Lock screen',
-      icon: 'https://example.com/icons/lock.png',
-      call: 'io.xconn.deskconn.deskconnd.screen.lock',
+      label: 'Ping',
+      icon: 'https://example.com/icons/ping.png',
+      call: 'com.example.ping',
     },
     {
-      id: 'mute',
-      visible: { bind: 'context.capabilities.audio' },
+      id: 'light',
+      visible: { bind: 'context.capabilities.light' },
       include: 'app-engine/blocks/toggle.yaml',
-      label: { on: 'Unmute', off: 'Mute' },
-      icon: { on: 'https://example.com/icons/volume-off.png', off: 'https://example.com/icons/volume-on.png' },
-      read: 'io.xconn.deskconn.deskconnd.audio.ismuted',
-      toggle: 'io.xconn.deskconn.deskconnd.audio.togglemute',
+      label: { on: 'Turn off', off: 'Turn on' },
+      icon: { on: 'https://example.com/icons/light-on.png', off: 'https://example.com/icons/light-off.png' },
+      read: 'com.example.light.ison',
+      toggle: 'com.example.light.toggle',
     },
   ] as any
   return app
@@ -43,8 +43,8 @@ describe('blocks', () => {
   })
 
   test('expands included blocks from their fields', () => {
-    const app = new ManifestApp(remoteControlWithIncludes())
-    expect(children(app.data)).toEqual(children(remoteControlManifest()))
+    const app = new ManifestApp(exampleWithIncludes())
+    expect(children(app.data)).toEqual(children(exampleManifest()))
   })
 
   test('leaves out unset fields', () => {
@@ -66,7 +66,7 @@ describe('blocks', () => {
   })
 
   test("leaves unknown blocks and doesn't change its input", () => {
-    const input = remoteControlWithIncludes()
+    const input = exampleWithIncludes()
     children(input)[0].include = 'app-engine/blocks/unknown.yaml'
     const app = new ManifestApp(input)
     expect(children(app.data)[0].include).toBe('app-engine/blocks/unknown.yaml')

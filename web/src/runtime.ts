@@ -8,6 +8,12 @@ export type ManifestCaller = (procedure: string, arg?: unknown) => Promise<unkno
 /** Returns the error URI of a failed call, which `on_error` reads as `error.uri`. */
 export type ErrorUri = (error: unknown) => string
 
+/**
+ * Loads one of the app's own files from the desktop, such as an icon, by its path from the
+ * app's directory, e.g. `icons/lock.png`.
+ */
+export type ManifestFileLoader = (path: string) => Promise<Uint8Array>
+
 type Scope = Record<string, unknown>
 type Json = Record<string, any>
 

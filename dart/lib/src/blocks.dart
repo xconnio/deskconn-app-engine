@@ -5,7 +5,7 @@
 const predefinedBlocks = <String, String>{
   'button': r'''
 # Calls a procedure when activated.
-# Fields: label, icon (optional), call, arg (optional).
+# Fields: label, icon (optional: a Material icon name from icons/names.txt, a PNG file in the app, or an https URL), call, arg (optional).
 component:
   type: button
   label: { param: label }
@@ -16,7 +16,7 @@ component:
 ''',
   'confirm': r'''
 # Calls a procedure when activated, once the user confirms, e.g. shut down or log out.
-# Fields: label, icon (optional), confirm (the question to confirm), call, arg (optional).
+# Fields: label, icon (optional: a Material icon name from icons/names.txt, a PNG file in the app, or an https URL), confirm (the question to confirm), call, arg (optional).
 component:
   type: button
   label: { param: label }
@@ -62,7 +62,7 @@ component:
 ''',
   'toggle': r'''
 # Reads whether something is on and flips it when activated.
-# Fields: label (on, off), icon (on, off; optional), read, toggle.
+# Fields: label (on, off), icon (on, off; optional: Material icon names from icons/names.txt, PNG files in the app, or https URLs), read, toggle.
 # read and toggle return whether it is on.
 state:
   on: false

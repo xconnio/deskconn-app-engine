@@ -5,28 +5,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:app_engine/app_engine.dart';
 import 'package:app_engine/src/blocks.dart';
 
-import 'remote_control_fixture.dart';
+import 'example_fixture.dart';
 
-/// The Remote Control app as written, including app-engine's blocks.
-Map<String, dynamic> remoteControlWithIncludes() {
-  final app = remoteControlManifest();
+/// A test app as written, including app-engine's blocks.
+Map<String, dynamic> exampleWithIncludes() {
+  final app = exampleManifest();
   (app['screens']['home']['layout'] as Map)['children'] = [
     {
-      'id': 'lock',
-      'visible': {'bind': 'context.capabilities.screen'},
+      'id': 'ping',
+      'visible': {'bind': 'context.capabilities.ping'},
       'include': 'app-engine/blocks/button.yaml',
-      'label': 'Lock screen',
-      'icon': 'https://example.com/icons/lock.png',
-      'call': 'io.xconn.deskconn.deskconnd.screen.lock',
+      'label': 'Ping',
+      'icon': 'https://example.com/icons/ping.png',
+      'call': 'com.example.ping',
     },
     {
-      'id': 'mute',
-      'visible': {'bind': 'context.capabilities.audio'},
+      'id': 'light',
+      'visible': {'bind': 'context.capabilities.light'},
       'include': 'app-engine/blocks/toggle.yaml',
-      'label': {'on': 'Unmute', 'off': 'Mute'},
-      'icon': {'on': 'https://example.com/icons/volume-off.png', 'off': 'https://example.com/icons/volume-on.png'},
-      'read': 'io.xconn.deskconn.deskconnd.audio.ismuted',
-      'toggle': 'io.xconn.deskconn.deskconnd.audio.togglemute',
+      'label': {'on': 'Turn off', 'off': 'Turn on'},
+      'icon': {'on': 'https://example.com/icons/light-on.png', 'off': 'https://example.com/icons/light-off.png'},
+      'read': 'com.example.light.ison',
+      'toggle': 'com.example.light.toggle',
     },
   ];
   return app;
@@ -43,8 +43,8 @@ void main() {
   });
 
   test('expands included blocks from their fields', () {
-    final app = ManifestApp(remoteControlWithIncludes());
-    expect(children(app.data), children(remoteControlManifest()));
+    final app = ManifestApp(exampleWithIncludes());
+    expect(children(app.data), children(exampleManifest()));
   });
 
   test('leaves out unset fields', () {
@@ -79,7 +79,7 @@ void main() {
   });
 
   test('leaves unknown blocks and doesn\'t change its input', () {
-    final input = remoteControlWithIncludes();
+    final input = exampleWithIncludes();
     (children(input).first as Map)['include'] = 'app-engine/blocks/unknown.yaml';
     final app = ManifestApp(input);
     expect(children(app.data).first['include'], 'app-engine/blocks/unknown.yaml');

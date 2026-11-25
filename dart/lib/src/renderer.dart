@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
+import 'icons.dart';
 import 'runtime.dart';
 
 /// Renders a manifest app's [screen]: its layout, and a block for each visible child.
@@ -11,6 +14,7 @@ class ManifestScreenView extends StatelessWidget {
     required this.context,
     required this.caller,
     this.errorUri,
+    this.loadFile,
   });
 
   final ManifestApp app;
@@ -20,6 +24,9 @@ class ManifestScreenView extends StatelessWidget {
   final Map<String, dynamic> context;
   final ManifestCaller caller;
   final ErrorUri? errorUri;
+
+  /// Loads the app's own icon files; without it, only https icons show.
+  final ManifestFileLoader? loadFile;
 
   @override
   Widget build(BuildContext buildContext) {
@@ -44,6 +51,7 @@ class ManifestScreenView extends StatelessWidget {
             context: context,
             caller: caller,
             errorUri: errorUri,
+            loadFile: loadFile,
           ),
       ],
     );
@@ -52,12 +60,20 @@ class ManifestScreenView extends StatelessWidget {
 
 /// A mounted block. It mounts when built and unmounts when removed.
 class ManifestBlockView extends StatefulWidget {
-  const ManifestBlockView({super.key, required this.block, required this.context, required this.caller, this.errorUri});
+  const ManifestBlockView({
+    super.key,
+    required this.block,
+    required this.context,
+    required this.caller,
+    this.errorUri,
+    this.loadFile,
+  });
 
   final Map<String, dynamic> block;
   final Map<String, dynamic> context;
   final ManifestCaller caller;
   final ErrorUri? errorUri;
+  final ManifestFileLoader? loadFile;
 
   @override
   State<ManifestBlockView> createState() => _ManifestBlockViewState();
@@ -90,7 +106,7 @@ class _ManifestBlockViewState extends State<ManifestBlockView> {
       builder: (context, _) {
         final component = _controller.component;
         return switch (component['type']) {
-          'button' => _ManifestButton(controller: _controller, component: component),
+          'button' => _ManifestButton(controller: _controller, component: component, loadFile: widget.loadFile),
           'text' => _ManifestText(controller: _controller, component: component),
           'slider' => _ManifestSlider(controller: _controller, component: component),
           'select' => _ManifestSelect(controller: _controller, component: component),
@@ -102,10 +118,11 @@ class _ManifestBlockViewState extends State<ManifestBlockView> {
 }
 
 class _ManifestButton extends StatelessWidget {
-  const _ManifestButton({required this.controller, required this.component});
+  const _ManifestButton({required this.controller, required this.component, this.loadFile});
 
   final BlockController controller;
   final Map<String, dynamic> component;
+  final ManifestFileLoader? loadFile;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +151,7 @@ class _ManifestButton extends StatelessWidget {
                 dimension: 40,
                 child: controller.busy
                     ? const Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 3))
-                    : _ManifestIcon(url: icon),
+                    : ManifestIcon(icon: icon, loadFile: loadFile),
               ),
               const SizedBox(height: 12),
               Text(label, textAlign: TextAlign.center, style: theme.textTheme.titleSmall),
@@ -341,17 +358,68 @@ class _ManifestSelectState extends State<_ManifestSelect> {
   }
 }
 
-class _ManifestIcon extends StatelessWidget {
-  const _ManifestIcon({required this.url});
+/// Shows a manifest [icon]: a name from [manifestIcons], such as play_arrow; an https URL; or
+/// one of the app's own PNG files, by its path from the app's directory, loaded from the
+/// desktop with [loadFile]. Anything else, or an image that fails to load, shows [fallback].
+class ManifestIcon extends StatefulWidget {
+  const ManifestIcon({
+    super.key,
+    required this.icon,
+    this.loadFile,
+    this.size = 32,
+    this.fallback = const Icon(Icons.widgets_outlined, size: 32),
+  });
 
-  final String? url;
+  final String? icon;
+  final ManifestFileLoader? loadFile;
+  final double size;
+  final Widget fallback;
+
+  @override
+  State<ManifestIcon> createState() => _ManifestIconState();
+}
+
+class _ManifestIconState extends State<ManifestIcon> {
+  /// The app file being shown and its load, kept while [ManifestIcon.icon] stays the same.
+  String? _file;
+  Future<Uint8List>? _loading;
+
+  Future<Uint8List>? _load(String? icon) {
+    final loadFile = widget.loadFile;
+    if (icon == null || loadFile == null || icon.contains('://') || !icon.endsWith('.png')) return null;
+    if (icon != _file) {
+      _file = icon;
+      _loading = loadFile(icon);
+    }
+    return _loading;
+  }
 
   @override
   Widget build(BuildContext context) {
-    const fallback = Icon(Icons.widgets_outlined, size: 32);
-    final url = this.url;
-    if (url == null || !url.startsWith('https://')) return fallback;
-    return Image.network(url, errorBuilder: (_, _, _) => fallback);
+    final icon = widget.icon;
+    final fallback = widget.fallback;
+    final named = manifestIcons[icon];
+    if (named != null) return Icon(named, size: widget.size);
+    if (icon != null && icon.startsWith('https://')) {
+      return Image.network(icon, width: widget.size, height: widget.size, errorBuilder: (_, _, _) => fallback);
+    }
+    final loading = _load(icon);
+    if (loading == null) return fallback;
+    return FutureBuilder(
+      future: loading,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return fallback;
+        final data = snapshot.data;
+        if (data == null) return SizedBox.square(dimension: widget.size);
+        return Image.memory(
+          data,
+          width: widget.size,
+          height: widget.size,
+          gaplessPlayback: true,
+          errorBuilder: (_, _, _) => fallback,
+        );
+      },
+    );
   }
 }
 

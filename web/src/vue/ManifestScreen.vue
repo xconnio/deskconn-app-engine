@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { isVisible, type ErrorUri, type ManifestCaller } from '../runtime'
+import { isVisible, type ErrorUri, type ManifestCaller, type ManifestFileLoader } from '../runtime'
 import ManifestBlock from './ManifestBlock.vue'
 
 // Renders a manifest app's screen: its layout, and a block for each visible child.
@@ -10,6 +10,8 @@ const props = defineProps<{
   context: Record<string, unknown>
   caller: ManifestCaller
   errorUri?: ErrorUri
+  /** Loads the app's own icon files; without it, only https icons show. */
+  loadFile?: ManifestFileLoader
 }>()
 
 const layout = computed(() => props.screen.layout ?? {})
@@ -32,6 +34,7 @@ const children = computed(() =>
       :context="context"
       :caller="caller"
       :error-uri="errorUri"
+      :load-file="loadFile"
     />
   </div>
   <div v-else>Unsupported layout {{ layout.type }}</div>

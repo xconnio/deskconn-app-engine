@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { BlockController, type ErrorUri, type ManifestCaller } from '../runtime'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { manifestIcons } from '../icons'
+import { BlockController, type ErrorUri, type ManifestCaller, type ManifestFileLoader } from '../runtime'
 
 // A mounted block. It mounts when created and unmounts when removed.
 const props = defineProps<{
@@ -8,15 +9,45 @@ const props = defineProps<{
   context: Record<string, unknown>
   caller: ManifestCaller
   errorUri?: ErrorUri
+  /** Loads the app's own icon files; without it, only https icons show. */
+  loadFile?: ManifestFileLoader
 }>()
 
 const controller = reactive(new BlockController(props.block, props.context, props.caller, props.errorUri))
 const component = computed(() => controller.component)
 const label = computed(() => String(controller.eval(component.value.label) ?? ''))
-const icon = computed(() => {
-  const url = controller.eval(component.value.icon)
-  return typeof url === 'string' && url.startsWith('https://') ? url : undefined
+// An icon is a name from manifestIcons, such as play_arrow; an https URL; or one of the app's
+// own PNG files, by its path from the app's directory, loaded from the desktop with loadFile.
+// Anything else shows none.
+const iconValue = computed(() => {
+  const value = controller.eval(component.value.icon)
+  return typeof value === 'string' ? value : undefined
 })
+// The app file shown, and an object URL of its image once loaded.
+let iconFile: string | undefined
+const iconFileUrl = ref<string>()
+function showIconFile(url: string | undefined) {
+  if (iconFileUrl.value) URL.revokeObjectURL(iconFileUrl.value)
+  iconFileUrl.value = url
+}
+watch(
+  iconValue,
+  async (value) => {
+    const isFile = value != null && !value.includes('://') && value.endsWith('.png')
+    if (!isFile || !props.loadFile) {
+      iconFile = undefined
+      return showIconFile(undefined)
+    }
+    if (value === iconFile) return
+    iconFile = value
+    showIconFile(undefined)
+    const data = await props.loadFile(value).catch(() => undefined)
+    if (data && iconFile === value) showIconFile(URL.createObjectURL(new Blob([data as BlobPart], { type: 'image/png' })))
+  },
+  { immediate: true },
+)
+const namedIcon = computed(() => (iconValue.value == null ? undefined : manifestIcons[iconValue.value]))
+const icon = computed(() => (iconValue.value?.startsWith('https://') ? iconValue.value : iconFileUrl.value))
 const question = computed(() => {
   const value = controller.eval(component.value.confirm)
   return value == null ? undefined : String(value)
@@ -71,7 +102,10 @@ function onConfirm() {
 }
 
 onMounted(() => controller.mount())
-onUnmounted(() => controller.dispose())
+onUnmounted(() => {
+  controller.dispose()
+  showIconFile(undefined)
+})
 </script>
 
 <template>
@@ -82,6 +116,9 @@ onUnmounted(() => controller.dispose())
   </div>
   <button v-else-if="component.type === 'button'" type="button" :disabled="controller.busy" @click="onActivate">
     <span v-if="controller.busy" role="progressbar" />
+    <svg v-else-if="namedIcon" viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true">
+      <path v-for="(d, i) in namedIcon" :key="i" :d="d" />
+    </svg>
     <img v-else-if="icon" :src="icon" alt="" width="40" height="40" />
     <span>{{ label }}</span>
     <small v-if="error">{{ error }}</small>

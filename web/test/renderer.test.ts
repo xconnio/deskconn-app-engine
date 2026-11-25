@@ -1,41 +1,43 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, test, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { ManifestApp, ManifestBlock, ManifestScreen } from '../src'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { ManifestApp, ManifestBlock, ManifestScreen, manifestIcons } from '../src'
 import { FakeCaller } from './fakeCaller'
-import { remoteControlManifest } from './remoteControl'
+import { exampleManifest } from './exampleApp'
 
 describe('renderer', () => {
-  const app = new ManifestApp(remoteControlManifest())
+  const app = new ManifestApp(exampleManifest())
   const render = (caller: FakeCaller, capabilities: Record<string, boolean>) =>
     mount(ManifestScreen, { props: { screen: app.entryScreen!, context: { capabilities }, caller: caller.call } })
 
   test('hidden blocks neither show nor call', () => {
     const caller = new FakeCaller()
-    const screen = render(caller, { screen: true, audio: false })
+    const screen = render(caller, { ping: true, light: false })
 
-    expect(screen.text()).toContain('Lock screen')
-    expect(screen.text()).not.toContain('Mute')
+    expect(screen.text()).toContain('Ping')
+    expect(screen.text()).not.toContain('Turn on')
     expect(caller.calls).toHaveLength(0)
   })
 
   test('buttons call their procedures and show their state', async () => {
     const caller = new FakeCaller()
-    const screen = render(caller, { screen: true, audio: true })
+    const screen = render(caller, { ping: true, light: true })
 
     await nextTick()
     expect(screen.find('[role=progressbar]').exists()).toBe(true)
-    await caller.respond('io.xconn.deskconn.deskconnd.audio.ismuted', { result: false })
+    await caller.respond('com.example.light.ison', { result: false })
     expect(screen.find('[role=progressbar]').exists()).toBe(false)
-    const [lock, mute] = screen.findAll('button')
-    expect(mute.text()).toBe('Mute')
+    const [ping, light] = screen.findAll('button')
+    expect(light.text()).toBe('Turn on')
 
-    await mute.trigger('click')
-    await caller.respond('io.xconn.deskconn.deskconnd.audio.togglemute', { result: true })
-    expect(mute.text()).toBe('Unmute')
+    await light.trigger('click')
+    await caller.respond('com.example.light.toggle', { result: true })
+    expect(light.text()).toBe('Turn off')
 
-    await lock.trigger('click')
-    expect(caller.calls.at(-1)!.procedure).toBe('io.xconn.deskconn.deskconnd.screen.lock')
+    await ping.trigger('click')
+    expect(caller.calls.at(-1)!.procedure).toBe('com.example.ping')
   })
 
   test('text blocks show their label', () => {
@@ -51,7 +53,7 @@ describe('renderer', () => {
 
   test('buttons with confirm call only once confirmed', async () => {
     const caller = new FakeCaller()
-    const shutdown = 'io.xconn.deskconn.deskconnd.power.shutdown'
+    const shutdown = 'com.example.power.shutdown'
     const block = mount(ManifestBlock, {
       props: {
         block: {
@@ -84,7 +86,7 @@ describe('renderer', () => {
     vi.useFakeTimers()
     try {
       const caller = new FakeCaller()
-      const read = 'io.xconn.deskconn.deskconnd.cpu.usage'
+      const read = 'com.example.cpu.usage'
       const block = mount(ManifestBlock, {
         props: {
           block: {
@@ -121,14 +123,14 @@ describe('renderer', () => {
 
   test('sliders show their value and set where they are dropped', async () => {
     const caller = new FakeCaller()
-    const set = 'io.xconn.deskconn.deskconnd.audio.setvolume'
+    const set = 'com.example.level.set'
     const block = mount(ManifestBlock, {
       props: {
         block: {
           state: { value: 20 },
           component: {
             type: 'slider',
-            label: 'Volume',
+            label: 'Level',
             step: 10,
             value: { bind: 'state.value' },
             on_change: { call: set, arg: { bind: 'value' }, on_result: { set: { value: { bind: 'result' } } } },
@@ -138,7 +140,7 @@ describe('renderer', () => {
         caller: caller.call,
       },
     })
-    expect(block.text()).toContain('Volume')
+    expect(block.text()).toContain('Level')
     expect(block.find('output').text()).toBe('20')
 
     const slider = block.find('input[type=range]')
@@ -154,7 +156,7 @@ describe('renderer', () => {
 
   test('selects show their choice and set what is picked', async () => {
     const caller = new FakeCaller()
-    const set = 'io.xconn.deskconn.deskconnd.power.setmode'
+    const set = 'com.example.power.setmode'
     const block = mount(ManifestBlock, {
       props: {
         block: {
@@ -188,5 +190,59 @@ describe('renderer', () => {
 
     await caller.respond(set, { result: 'saver' })
     expect(chosen()).toBe('Power saver')
+  })
+
+  test('buttons show named icons, the app\'s own icon files from the desktop, or https icons', async () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+    const loaded: string[] = []
+    const loadFile = async (path: string) => {
+      loaded.push(path)
+      if (path !== 'icons/ping.png') throw new Error(`no file ${path}`)
+      return png
+    }
+    const src = async (icon: string) => {
+      const block = mount(ManifestBlock, {
+        props: {
+          block: { component: { type: 'button', label: 'Ping', icon } },
+          context: {},
+          caller: new FakeCaller().call,
+          loadFile,
+        },
+      })
+      await flushPromises()
+      const img = block.find('img')
+      return img.exists() ? img.attributes('src') : undefined
+    }
+
+    const named = mount(ManifestBlock, {
+      props: {
+        block: { component: { type: 'button', label: 'Star', icon: 'star' } },
+        context: {},
+        caller: new FakeCaller().call,
+        loadFile,
+      },
+    })
+    expect(named.findAll('svg path').map((path) => path.attributes('d'))).toEqual(manifestIcons.star)
+    expect(named.find('img').exists()).toBe(false)
+    expect(loaded).toEqual([])
+
+    expect(await src('icons/ping.png')).toMatch(/^blob:/)
+    expect(loaded).toEqual(['icons/ping.png'])
+    expect(await src('https://example.com/ping.png')).toBe('https://example.com/ping.png')
+
+    loaded.length = 0
+    for (const icon of ['icons/missing.png', 'http://example.com/ping.png', 'javascript:alert(1)', 'icons/ping.svg']) {
+      expect(await src(icon), icon).toBeUndefined()
+    }
+    expect(loaded).toEqual(['icons/missing.png'])
+  })
+
+  test('named icons are exactly icons/names.txt', () => {
+    const names = readFileSync(resolve(__dirname, '../../icons/names.txt'), 'utf8')
+      .split('\n')
+      .filter((line) => !line.startsWith('#'))
+      .flatMap((line) => line.split(' '))
+      .filter(Boolean)
+    expect(Object.keys(manifestIcons)).toEqual(names)
   })
 })

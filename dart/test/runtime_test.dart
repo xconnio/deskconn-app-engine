@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:app_engine/app_engine.dart';
 
-import 'remote_control_fixture.dart';
+import 'example_fixture.dart';
 
-const _isMuted = 'io.xconn.deskconn.deskconnd.audio.ismuted';
-const _toggleMute = 'io.xconn.deskconn.deskconnd.audio.togglemute';
+const _isOn = 'com.example.light.ison';
+const _toggleLight = 'com.example.light.toggle';
 
 /// A caller whose calls stay pending until the test answers them.
 class FakeCaller {
@@ -40,7 +40,7 @@ class CallError implements Exception {
 }
 
 void main() {
-  final app = ManifestApp(remoteControlManifest());
+  final app = ManifestApp(exampleManifest());
   final children = (app.entryScreen!['layout'] as Map)['children'] as List;
   Map<String, dynamic> block(String id) => (children.firstWhere((c) => c['id'] == id) as Map)['block'];
 
@@ -50,21 +50,21 @@ void main() {
   setUp(() => caller = FakeCaller());
 
   test('reads the app', () {
-    expect(app.id, 'remote-control');
-    expect(app.name, 'Remote Control');
-    expect(app.keyExchange, 'io.xconn.deskconn.deskconnd.remotecontrol.key.exchange');
-    expect(app.entryScreen!['title'], 'Remote Control');
+    expect(app.id, 'example');
+    expect(app.name, 'Example');
+    expect(app.keyExchange, 'com.example.key.exchange');
+    expect(app.entryScreen!['title'], 'Example');
   });
 
   test('bindings, conditionals and visibility', () {
     final scope = {
-      'state': {'muted': true},
+      'state': {'lit': true},
     };
-    expect(evaluate({'bind': 'state.muted'}, scope), true);
+    expect(evaluate({'bind': 'state.lit'}, scope), true);
     expect(evaluate({'bind': 'state.missing.deeper'}, scope), isNull);
     expect(
       evaluate({
-        'when': {'bind': 'state.muted'},
+        'when': {'bind': 'state.lit'},
         'then': 'a',
         'else': 'b',
       }, scope),
@@ -81,47 +81,47 @@ void main() {
     expect(evaluate('literal', scope), 'literal');
 
     final context = {
-      'capabilities': {'screen': true, 'audio': false},
+      'capabilities': {'ping': true, 'light': false},
     };
     expect(isVisible(null, context), true);
-    expect(isVisible({'bind': 'context.capabilities.screen'}, context), true);
-    expect(isVisible({'bind': 'context.capabilities.audio'}, context), false);
+    expect(isVisible({'bind': 'context.capabilities.ping'}, context), true);
+    expect(isVisible({'bind': 'context.capabilities.light'}, context), false);
     expect(isVisible({'bind': 'context.capabilities.printer'}, context), false);
   });
 
-  test('mute loads its state, then toggles', () async {
-    final mute = controller('mute');
-    expect(mute.eval(mute.component['label']), 'Mute');
+  test('light loads its state, then toggles', () async {
+    final light = controller('light');
+    expect(light.eval(light.component['label']), 'Turn on');
 
-    unawaited(mute.mount());
-    expect(mute.busy, true);
-    expect(caller.calls.single.procedure, _isMuted);
-    await caller.respond(_isMuted, result: false);
-    expect(mute.busy, false);
-    expect(mute.eval(mute.component['label']), 'Mute');
-    expect(mute.eval(mute.component['icon']), 'https://example.com/icons/volume-on.png');
+    unawaited(light.mount());
+    expect(light.busy, true);
+    expect(caller.calls.single.procedure, _isOn);
+    await caller.respond(_isOn, result: false);
+    expect(light.busy, false);
+    expect(light.eval(light.component['label']), 'Turn on');
+    expect(light.eval(light.component['icon']), 'https://example.com/icons/light-off.png');
 
-    unawaited(mute.activate());
-    expect(mute.busy, true);
+    unawaited(light.activate());
+    expect(light.busy, true);
     // Pressing again while the call is in flight does nothing.
-    await mute.activate();
-    expect(caller.calls.where((c) => c.procedure == _toggleMute), hasLength(1));
-    await caller.respond(_toggleMute, result: true);
-    expect(mute.state['on'], true);
-    expect(mute.eval(mute.component['label']), 'Unmute');
-    expect(mute.eval(mute.component['icon']), 'https://example.com/icons/volume-off.png');
+    await light.activate();
+    expect(caller.calls.where((c) => c.procedure == _toggleLight), hasLength(1));
+    await caller.respond(_toggleLight, result: true);
+    expect(light.state['on'], true);
+    expect(light.eval(light.component['label']), 'Turn off');
+    expect(light.eval(light.component['icon']), 'https://example.com/icons/light-on.png');
   });
 
   test('a failed call keeps the state and shows the error', () async {
-    final mute = controller('mute');
-    unawaited(mute.mount());
-    await caller.respond(_isMuted, result: true);
+    final light = controller('light');
+    unawaited(light.mount());
+    await caller.respond(_isOn, result: true);
 
-    unawaited(mute.activate());
-    await caller.respond(_toggleMute, error: CallError('wamp.error.operation_failed'));
-    expect(mute.busy, false);
-    expect(mute.state['on'], true);
-    expect(mute.error, isA<CallError>());
+    unawaited(light.activate());
+    await caller.respond(_toggleLight, error: CallError('wamp.error.operation_failed'));
+    expect(light.busy, false);
+    expect(light.state['on'], true);
+    expect(light.error, isA<CallError>());
   });
 
   test('on_error gets the error uri', () async {
@@ -129,7 +129,7 @@ void main() {
       block: {
         'state': {'failure': null},
         'on_mount': {
-          'call': _isMuted,
+          'call': _isOn,
           'on_error': {
             'set': {
               'failure': {'bind': 'error.uri'},
@@ -143,7 +143,7 @@ void main() {
       errorUri: (e) => (e as CallError).uri,
     );
     unawaited(b.mount());
-    await caller.respond(_isMuted, error: CallError('wamp.error.no_such_procedure'));
+    await caller.respond(_isOn, error: CallError('wamp.error.no_such_procedure'));
     expect(b.state['failure'], 'wamp.error.no_such_procedure');
     expect(b.error, isNull);
   });
@@ -170,7 +170,7 @@ void main() {
       block: {
         'state': {'value': null},
         'on_mount': {
-          'call': 'io.xconn.deskconn.deskconnd.hostname',
+          'call': 'com.example.hostname',
           'on_result': {
             'set': {
               'value': {'bind': 'result'},
@@ -186,14 +186,14 @@ void main() {
       caller: caller.call,
     );
     unawaited(host.mount());
-    await caller.respond('io.xconn.deskconn.deskconnd.hostname', result: 'office-pc');
+    await caller.respond('com.example.hostname', result: 'office-pc');
     expect(host.eval(host.component['label']), 'office-pc');
   });
 
   test('a slider sets what it is changed to', () async {
-    const read = 'io.xconn.deskconn.deskconnd.audio.volume';
-    const set = 'io.xconn.deskconn.deskconnd.audio.setvolume';
-    final volume = BlockController(
+    const read = 'com.example.level.get';
+    const set = 'com.example.level.set';
+    final level = BlockController(
       block: {
         'state': {'value': null},
         'on_mount': {
@@ -221,25 +221,25 @@ void main() {
       context: const {},
       caller: caller.call,
     );
-    unawaited(volume.mount());
+    unawaited(level.mount());
     await caller.respond(read, result: 30);
-    expect(volume.eval(volume.component['value']), 30);
+    expect(level.eval(level.component['value']), 30);
 
-    unawaited(volume.change(55.0));
+    unawaited(level.change(55.0));
     expect(caller.calls.last.procedure, set);
     expect(caller.calls.last.arg, 55.0);
     // Changing again while the call is in flight does nothing.
-    await volume.change(70.0);
+    await level.change(70.0);
     expect(caller.calls.where((c) => c.procedure == set), hasLength(1));
     await caller.respond(set, result: 55);
-    expect(volume.state['value'], 55);
+    expect(level.state['value'], 55);
   });
 
   test('ignores responses after unmount', () async {
-    final mute = controller('mute');
-    unawaited(mute.mount());
-    mute.dispose();
-    await caller.respond(_isMuted, result: true);
-    expect(mute.state['on'], false);
+    final light = controller('light');
+    unawaited(light.mount());
+    light.dispose();
+    await caller.respond(_isOn, result: true);
+    expect(light.state['on'], false);
   });
 }

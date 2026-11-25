@@ -1,5 +1,5 @@
 # Calls a procedure when activated.
-# Fields: label, icon (optional), call, arg (optional).
+# Fields: label, icon (optional: a Material icon name from icons/names.txt, a PNG file in the app, or an https URL), call, arg (optional).
 component:
   type: button
   label: { param: label }

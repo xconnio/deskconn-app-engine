@@ -1,5 +1,5 @@
 # Reads whether something is on and flips it when activated.
-# Fields: label (on, off), icon (on, off; optional), read, toggle.
+# Fields: label (on, off), icon (on, off; optional: Material icon names from icons/names.txt, PNG files in the app, or https URLs), read, toggle.
 # read and toggle return whether it is on.
 state:
   on: false
