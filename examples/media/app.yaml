@@ -1,0 +1,14 @@
+schema_version: "1"
+
+app:
+  id: media
+  name: Media
+  description: Play, pause and skip what's playing on your computer
+
+api:
+  key_exchange: com.deskconn.remotecontrol.key.exchange
+
+entry_screen: home
+
+screens:
+  - screens/home.yaml
