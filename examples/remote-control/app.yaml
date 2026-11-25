@@ -3,10 +3,10 @@ schema_version: "1"
 app:
   id: remote-control
   name: Remote Control
-  description: Lock your computer and control audio
+  description: Lock your computer, and control its brightness, audio and media
 
 api:
-  key_exchange: io.xconn.remotecontrol.key.exchange
+  key_exchange: com.deskconn.remotecontrol.key.exchange
 
 entry_screen: home
 

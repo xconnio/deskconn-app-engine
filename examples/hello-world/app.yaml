@@ -6,7 +6,7 @@ app:
   description: The smallest manifest app
 
 api:
-  key_exchange: io.xconn.deskconn.key.exchange
+  key_exchange: com.deskconn.key.exchange
 
 entry_screen: home
 
