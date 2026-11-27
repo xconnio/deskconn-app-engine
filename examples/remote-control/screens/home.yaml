@@ -11,6 +11,7 @@ layout:
         bind: context.capabilities.screen
       label: Lock screen
       confirm: Lock the screen now?
+      icon: lock
       call: com.deskconn.remotecontrol.screen.lock
 
     - id: locked
@@ -39,6 +40,9 @@ layout:
       label:
         on: Unmute
         off: Mute
+      icon:
+        on: volume_off
+        off: volume_up
       read: com.deskconn.remotecontrol.audio.ismuted
       toggle: com.deskconn.remotecontrol.audio.togglemute
 
@@ -47,6 +51,7 @@ layout:
       visible:
         bind: context.capabilities.media-player
       label: Previous
+      icon: skip_previous
       call: com.deskconn.remotecontrol.mpris.previous
 
     - id: play-pause
@@ -54,6 +59,7 @@ layout:
       visible:
         bind: context.capabilities.media-player
       label: Play / pause
+      icon: play_arrow
       call: com.deskconn.remotecontrol.mpris.playpause
 
     - id: next
@@ -61,4 +67,5 @@ layout:
       visible:
         bind: context.capabilities.media-player
       label: Next
+      icon: skip_next
       call: com.deskconn.remotecontrol.mpris.next
