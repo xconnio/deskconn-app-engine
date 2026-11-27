@@ -12,6 +12,10 @@ typedef ManifestCaller = Future<dynamic> Function(String procedure, Object? arg)
 /// Returns the error URI of a failed call, which `on_error` reads as `error.uri`.
 typedef ErrorUri = String Function(Object error);
 
+/// Loads one of the app's own files from the desktop, such as an icon, by its path from the
+/// app's directory, e.g. `icons/lock.png`.
+typedef ManifestFileLoader = Future<Uint8List> Function(String path);
+
 String _errorString(Object error) => error.toString();
 
 /// A manifest app as deskconn-userd's manifest.get returns it: app.yaml with its screens

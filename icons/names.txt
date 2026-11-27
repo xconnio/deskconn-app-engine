@@ -1,0 +1,20 @@
+# The icons a manifest can name, e.g. `icon: play_arrow`: Material Icons (Apache-2.0,
+# https://fonts.google.com/icons), filled. Flutter has them all as Icons.<name>; the web
+# renderer's SVG paths come from @material-design-icons/svg. Both renderers' tests check
+# they have exactly these names.
+play_arrow pause stop skip_next skip_previous fast_forward fast_rewind replay shuffle repeat
+volume_up volume_down volume_off volume_mute mic mic_off music_note queue_music movie videocam
+videocam_off cast photo camera_alt
+power_settings_new restart_alt bedtime lock lock_open logout login settings tune
+brightness_high brightness_medium brightness_low dark_mode light_mode wallpaper
+desktop_windows laptop monitor keyboard mouse print memory storage speed
+battery_full battery_charging_full wifi wifi_off bluetooth bluetooth_disabled vpn_key
+notifications notifications_off timer schedule alarm thermostat lightbulb
+folder folder_open insert_drive_file description image download upload cloud
+cloud_upload cloud_download delete content_copy content_paste edit save share
+search refresh sync open_in_new link terminal code language
+add remove close check info warning error help home apps menu more_vert
+star favorite visibility visibility_off
+arrow_back arrow_forward arrow_upward arrow_downward keyboard_arrow_up keyboard_arrow_down
+chevron_left chevron_right fullscreen fullscreen_exit zoom_in zoom_out open_with touch_app
+person group chat mail phone_android sports_esports smart_display

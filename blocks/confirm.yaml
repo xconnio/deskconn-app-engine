@@ -1,5 +1,5 @@
 # Calls a procedure when activated, once the user confirms, e.g. shut down or log out.
-# Fields: label, icon (optional), confirm (the question to confirm), call, arg (optional).
+# Fields: label, icon (optional: a Material icon name from icons/names.txt, a PNG file in the app, or an https URL), confirm (the question to confirm), call, arg (optional).
 component:
   type: button
   label: { param: label }

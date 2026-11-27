@@ -1,42 +1,42 @@
-/// The Remote Control app as deskconn-userd's manifest.get returns it, with the button and
+/// A test app as deskconn-userd's manifest.get returns it, with the button and
 /// toggle blocks filled in.
-Map<String, dynamic> remoteControlManifest() => {
+Map<String, dynamic> exampleManifest() => {
   'schema_version': '1',
   'app': {
-    'id': 'remote-control',
-    'name': 'Remote Control',
-    'description': 'Lock your computer and control audio',
-    'icon': 'https://example.com/icons/remote-control.png',
+    'id': 'example',
+    'name': 'Example',
+    'description': 'A test app with a button and a toggle',
+    'icon': 'https://example.com/icons/example.png',
   },
-  'api': {'key_exchange': 'io.xconn.deskconn.deskconnd.remotecontrol.key.exchange'},
+  'api': {'key_exchange': 'com.example.key.exchange'},
   'entry_screen': 'home',
   'screens': {
     'home': {
       'id': 'home',
-      'title': 'Remote Control',
+      'title': 'Example',
       'layout': {
         'type': 'grid',
         'columns': 2,
         'children': [
           {
-            'id': 'lock',
-            'visible': {'bind': 'context.capabilities.screen'},
+            'id': 'ping',
+            'visible': {'bind': 'context.capabilities.ping'},
             'block': {
               'component': {
                 'type': 'button',
-                'label': 'Lock screen',
-                'icon': 'https://example.com/icons/lock.png',
-                'on_activate': {'call': 'io.xconn.deskconn.deskconnd.screen.lock'},
+                'label': 'Ping',
+                'icon': 'https://example.com/icons/ping.png',
+                'on_activate': {'call': 'com.example.ping'},
               },
             },
           },
           {
-            'id': 'mute',
-            'visible': {'bind': 'context.capabilities.audio'},
+            'id': 'light',
+            'visible': {'bind': 'context.capabilities.light'},
             'block': {
               'state': {'on': false},
               'on_mount': {
-                'call': 'io.xconn.deskconn.deskconnd.audio.ismuted',
+                'call': 'com.example.light.ison',
                 'on_result': {
                   'set': {
                     'on': {'bind': 'result'},
@@ -47,16 +47,16 @@ Map<String, dynamic> remoteControlManifest() => {
                 'type': 'button',
                 'label': {
                   'when': {'bind': 'state.on'},
-                  'then': 'Unmute',
-                  'else': 'Mute',
+                  'then': 'Turn off',
+                  'else': 'Turn on',
                 },
                 'icon': {
                   'when': {'bind': 'state.on'},
-                  'then': 'https://example.com/icons/volume-off.png',
-                  'else': 'https://example.com/icons/volume-on.png',
+                  'then': 'https://example.com/icons/light-on.png',
+                  'else': 'https://example.com/icons/light-off.png',
                 },
                 'on_activate': {
-                  'call': 'io.xconn.deskconn.deskconnd.audio.togglemute',
+                  'call': 'com.example.light.toggle',
                   'on_result': {
                     'set': {
                       'on': {'bind': 'result'},

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { BlockController, ManifestApp, evaluate, isVisible } from '../src'
 import { CallError, FakeCaller } from './fakeCaller'
-import { remoteControlManifest } from './remoteControl'
+import { exampleManifest } from './exampleApp'
 
-const isMuted = 'io.xconn.deskconn.deskconnd.audio.ismuted'
-const toggleMute = 'io.xconn.deskconn.deskconnd.audio.togglemute'
+const isOn = 'com.example.light.ison'
+const toggleLight = 'com.example.light.toggle'
 
 describe('runtime', () => {
-  const app = new ManifestApp(remoteControlManifest())
+  const app = new ManifestApp(exampleManifest())
   const block = (id: string) => app.entryScreen!.layout.children.find((c: any) => c.id === id).block
 
   let caller: FakeCaller
@@ -18,67 +18,67 @@ describe('runtime', () => {
   })
 
   test('reads the app', () => {
-    expect(app.id).toBe('remote-control')
-    expect(app.name).toBe('Remote Control')
-    expect(app.keyExchange).toBe('io.xconn.deskconn.deskconnd.remotecontrol.key.exchange')
-    expect(app.entryScreen!.title).toBe('Remote Control')
+    expect(app.id).toBe('example')
+    expect(app.name).toBe('Example')
+    expect(app.keyExchange).toBe('com.example.key.exchange')
+    expect(app.entryScreen!.title).toBe('Example')
   })
 
   test('bindings, conditionals and visibility', () => {
-    const scope = { state: { muted: true } }
-    expect(evaluate({ bind: 'state.muted' }, scope)).toBe(true)
+    const scope = { state: { lit: true } }
+    expect(evaluate({ bind: 'state.lit' }, scope)).toBe(true)
     expect(evaluate({ bind: 'state.missing.deeper' }, scope)).toBeUndefined()
-    expect(evaluate({ when: { bind: 'state.muted' }, then: 'a', else: 'b' }, scope)).toBe('a')
+    expect(evaluate({ when: { bind: 'state.lit' }, then: 'a', else: 'b' }, scope)).toBe('a')
     expect(evaluate({ when: { bind: 'state.missing' }, then: 'a', else: 'b' }, scope)).toBe('b')
     expect(evaluate('literal', scope)).toBe('literal')
 
-    const context = { capabilities: { screen: true, audio: false } }
+    const context = { capabilities: { ping: true, light: false } }
     expect(isVisible(undefined, context)).toBe(true)
-    expect(isVisible({ bind: 'context.capabilities.screen' }, context)).toBe(true)
-    expect(isVisible({ bind: 'context.capabilities.audio' }, context)).toBe(false)
+    expect(isVisible({ bind: 'context.capabilities.ping' }, context)).toBe(true)
+    expect(isVisible({ bind: 'context.capabilities.light' }, context)).toBe(false)
     expect(isVisible({ bind: 'context.capabilities.printer' }, context)).toBe(false)
   })
 
-  test('mute loads its state, then toggles', async () => {
-    const mute = controller('mute')
-    expect(mute.eval(mute.component.label)).toBe('Mute')
+  test('light loads its state, then toggles', async () => {
+    const light = controller('light')
+    expect(light.eval(light.component.label)).toBe('Turn on')
 
-    void mute.mount()
-    expect(mute.busy).toBe(true)
-    expect(caller.calls.map((c) => c.procedure)).toEqual([isMuted])
-    await caller.respond(isMuted, { result: false })
-    expect(mute.busy).toBe(false)
-    expect(mute.eval(mute.component.label)).toBe('Mute')
-    expect(mute.eval(mute.component.icon)).toBe('https://example.com/icons/volume-on.png')
+    void light.mount()
+    expect(light.busy).toBe(true)
+    expect(caller.calls.map((c) => c.procedure)).toEqual([isOn])
+    await caller.respond(isOn, { result: false })
+    expect(light.busy).toBe(false)
+    expect(light.eval(light.component.label)).toBe('Turn on')
+    expect(light.eval(light.component.icon)).toBe('https://example.com/icons/light-off.png')
 
-    void mute.activate()
-    expect(mute.busy).toBe(true)
+    void light.activate()
+    expect(light.busy).toBe(true)
     // Pressing again while the call is in flight does nothing.
-    await mute.activate()
-    expect(caller.calls.filter((c) => c.procedure === toggleMute)).toHaveLength(1)
-    await caller.respond(toggleMute, { result: true })
-    expect(mute.state.on).toBe(true)
-    expect(mute.eval(mute.component.label)).toBe('Unmute')
-    expect(mute.eval(mute.component.icon)).toBe('https://example.com/icons/volume-off.png')
+    await light.activate()
+    expect(caller.calls.filter((c) => c.procedure === toggleLight)).toHaveLength(1)
+    await caller.respond(toggleLight, { result: true })
+    expect(light.state.on).toBe(true)
+    expect(light.eval(light.component.label)).toBe('Turn off')
+    expect(light.eval(light.component.icon)).toBe('https://example.com/icons/light-on.png')
   })
 
   test('a failed call keeps the state and shows the error', async () => {
-    const mute = controller('mute')
-    void mute.mount()
-    await caller.respond(isMuted, { result: true })
+    const light = controller('light')
+    void light.mount()
+    await caller.respond(isOn, { result: true })
 
-    void mute.activate()
-    await caller.respond(toggleMute, { error: new CallError('wamp.error.operation_failed') })
-    expect(mute.busy).toBe(false)
-    expect(mute.state.on).toBe(true)
-    expect(mute.error).toBeInstanceOf(CallError)
+    void light.activate()
+    await caller.respond(toggleLight, { error: new CallError('wamp.error.operation_failed') })
+    expect(light.busy).toBe(false)
+    expect(light.state.on).toBe(true)
+    expect(light.error).toBeInstanceOf(CallError)
   })
 
   test('on_error gets the error uri', async () => {
     const b = new BlockController(
       {
         state: { failure: null },
-        on_mount: { call: isMuted, on_error: { set: { failure: { bind: 'error.uri' } } } },
+        on_mount: { call: isOn, on_error: { set: { failure: { bind: 'error.uri' } } } },
         component: { type: 'button', label: 'x' },
       },
       {},
@@ -86,7 +86,7 @@ describe('runtime', () => {
       (e) => (e as CallError).uri,
     )
     void b.mount()
-    await caller.respond(isMuted, { error: new CallError('wamp.error.no_such_procedure') })
+    await caller.respond(isOn, { error: new CallError('wamp.error.no_such_procedure') })
     expect(b.state.failure).toBe('wamp.error.no_such_procedure')
     expect(b.error).toBeNull()
   })
@@ -106,21 +106,21 @@ describe('runtime', () => {
     const host = new BlockController(
       {
         state: { value: null },
-        on_mount: { call: 'io.xconn.deskconn.deskconnd.hostname', on_result: { set: { value: { bind: 'result' } } } },
+        on_mount: { call: 'com.example.hostname', on_result: { set: { value: { bind: 'result' } } } },
         component: { type: 'text', label: { bind: 'state.value' } },
       },
       {},
       caller.call,
     )
     void host.mount()
-    await caller.respond('io.xconn.deskconn.deskconnd.hostname', { result: 'office-pc' })
+    await caller.respond('com.example.hostname', { result: 'office-pc' })
     expect(host.eval(host.component.label)).toBe('office-pc')
   })
 
   test('a slider sets what it is changed to', async () => {
-    const read = 'io.xconn.deskconn.deskconnd.audio.volume'
-    const set = 'io.xconn.deskconn.deskconnd.audio.setvolume'
-    const volume = new BlockController(
+    const read = 'com.example.level.get'
+    const set = 'com.example.level.set'
+    const level = new BlockController(
       {
         state: { value: null },
         on_mount: { call: read, on_result: { set: { value: { bind: 'result' } } } },
@@ -133,25 +133,25 @@ describe('runtime', () => {
       {},
       caller.call,
     )
-    void volume.mount()
+    void level.mount()
     await caller.respond(read, { result: 30 })
-    expect(volume.eval(volume.component.value)).toBe(30)
+    expect(level.eval(level.component.value)).toBe(30)
 
-    void volume.change(55)
+    void level.change(55)
     expect(caller.calls.at(-1)!.procedure).toBe(set)
     expect(caller.calls.at(-1)!.arg).toBe(55)
     // Changing again while the call is in flight does nothing.
-    await volume.change(70)
+    await level.change(70)
     expect(caller.calls.filter((c) => c.procedure === set)).toHaveLength(1)
     await caller.respond(set, { result: 55 })
-    expect(volume.state.value).toBe(55)
+    expect(level.state.value).toBe(55)
   })
 
   test('ignores responses after unmount', async () => {
-    const mute = controller('mute')
-    void mute.mount()
-    mute.dispose()
-    await caller.respond(isMuted, { result: true })
-    expect(mute.state.on).toBe(false)
+    const light = controller('light')
+    void light.mount()
+    light.dispose()
+    await caller.respond(isOn, { result: true })
+    expect(light.state.on).toBe(false)
   })
 })
