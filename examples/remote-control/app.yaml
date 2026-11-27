@@ -4,6 +4,7 @@ app:
   id: remote-control
   name: Remote Control
   description: Lock your computer, and control its brightness, audio and media
+  icon: icons/app.png
 
 api:
   key_exchange: com.deskconn.remotecontrol.key.exchange
